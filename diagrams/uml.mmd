@@ -18,6 +18,7 @@ classDiagram
         +str breed
         +list~Task~ tasks
         +add_task(task Task) None
+        +complete_task(task Task) Task
     }
 
     class Task {
@@ -29,8 +30,10 @@ classDiagram
         +time fixed_time
         +int weekday
         +bool completed
+        +date due_date
         +int priority_rank() int
         +mark_complete() None
+        +next_occurrence() Task
     }
 
     class ScheduledTask {

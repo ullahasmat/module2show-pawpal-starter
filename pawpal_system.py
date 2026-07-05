@@ -9,8 +9,8 @@ be driven and tested from a plain CLI script.
 from __future__ import annotations
 
 import itertools
-from dataclasses import dataclass, field
-from datetime import date, time
+from dataclasses import dataclass, field, replace
+from datetime import date, time, timedelta
 from typing import Optional
 
 # Ordering used to rank priorities (higher number = more urgent).
@@ -40,6 +40,7 @@ class Task:
     fixed_time: Optional[time] = None  # set when the task must happen at a specific time
     weekday: Optional[int] = None  # 0=Mon .. 6=Sun; anchors a "weekly" recurrence
     completed: bool = False
+    due_date: Optional[date] = None  # the date this specific instance is due
 
     def priority_rank(self) -> int:
         """Return a numeric rank so tasks can be sorted by urgency."""
@@ -48,6 +49,22 @@ class Task:
     def mark_complete(self) -> None:
         """Mark this task as done for the day."""
         self.completed = True
+
+    def next_occurrence(self) -> Optional["Task"]:
+        """Return a fresh, uncompleted copy of this task for its next due date.
+
+        Daily tasks advance by one day and weekly tasks by one week; using
+        timedelta keeps month/year rollovers correct (e.g. Jan 31 -> Feb 1).
+        Returns None for non-recurring ("none") tasks.
+        """
+        if self.recurrence == "daily":
+            step = timedelta(days=1)
+        elif self.recurrence == "weekly":
+            step = timedelta(weeks=1)
+        else:
+            return None
+        base = self.due_date or date.today()
+        return replace(self, completed=False, due_date=base + step)
 
 
 @dataclass
@@ -76,6 +93,18 @@ class Pet:
     def add_task(self, task: Task) -> None:
         """Attach a care task to this pet."""
         self.tasks.append(task)
+
+    def complete_task(self, task: Task) -> Optional[Task]:
+        """Mark a task complete and, if it recurs, queue its next occurrence.
+
+        Returns the newly spawned follow-up task, or None when the task does
+        not recur. The original completed task is kept as history.
+        """
+        task.mark_complete()
+        follow_up = task.next_occurrence()
+        if follow_up is not None:
+            self.tasks.append(follow_up)
+        return follow_up
 
 
 @dataclass

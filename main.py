@@ -73,6 +73,20 @@ def main() -> None:
     for t in scheduler.filter_by_status(completed=False):
         print(f"  - {t.title}")
 
+    # --- Recurring: completing a daily task spawns the next occurrence -------
+    print("\n" + "=" * 48)
+    print("  Recurring: complete a daily task -> next instance spawns")
+    print("=" * 48)
+    mochi = owner.pets[0]
+    enrichment = next(t for t in mochi.tasks if t.title == "Enrichment puzzle")
+    print(f"  Before: Mochi has {len(mochi.tasks)} task(s).")
+    follow_up = mochi.complete_task(enrichment)
+    print(f"  Completed '{enrichment.title}' (recurrence={enrichment.recurrence}).")
+    if follow_up:
+        print(f"  Auto-created next occurrence due {follow_up.due_date} "
+              f"(completed={follow_up.completed}).")
+    print(f"  After: Mochi has {len(mochi.tasks)} task(s).")
+
 
 if __name__ == "__main__":
     main()
