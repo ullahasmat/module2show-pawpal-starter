@@ -1,6 +1,7 @@
 classDiagram
-    %% PawPal+ system design (Phase 1 draft).
-    %% Keep this file updated so it matches the final implementation in pawpal_system.py.
+    %% PawPal+ final system architecture -- matches pawpal_system.py.
+    %% Data classes (Owner, Pet, Task, ScheduledTask) hold state; Scheduler
+    %% holds the algorithms that read that state to build a daily plan.
 
     class Owner {
         +str name
