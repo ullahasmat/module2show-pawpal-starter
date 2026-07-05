@@ -20,6 +20,7 @@ if "owner" not in st.session_state:
     )
 
 owner: Owner = st.session_state.owner
+scheduler = Scheduler(owner)  # cheap wrapper; recreated each rerun around the persisted owner
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 st.title("🐾 PawPal+")
@@ -112,13 +113,76 @@ else:
 
 st.divider()
 
+# --- Tasks & Completion ---------------------------------------------------
+# Surfaces the Scheduler's sorting/filtering, and lets the user complete a
+# task -- which triggers Pet.complete_task() and auto-spawns the next
+# occurrence for recurring tasks.
+st.subheader("✅ Tasks & Completion")
+if not owner.all_tasks():
+    st.info("No tasks yet. Add some above to see them here.")
+else:
+    fcol1, fcol2 = st.columns(2)
+    with fcol1:
+        pet_filter = st.selectbox("Filter by pet", ["All pets"] + [p.name for p in owner.pets])
+    with fcol2:
+        status_filter = st.radio("Show", ["Pending", "Completed", "All"], horizontal=True)
+
+    # Sort by time (Scheduler.sort_by_time) and filter by pet (filter_by_pet).
+    if pet_filter == "All pets":
+        tasks = scheduler.sort_by_time(owner.all_tasks())
+    else:
+        tasks = scheduler.sort_by_time(scheduler.filter_by_pet(pet_filter))
+
+    if status_filter == "Pending":
+        tasks = [t for t in tasks if not t.completed]
+    elif status_filter == "Completed":
+        tasks = [t for t in tasks if t.completed]
+
+    if tasks:
+        st.table(
+            [
+                {
+                    "Time": t.fixed_time.strftime("%H:%M") if t.fixed_time else "flexible",
+                    "Task": t.title,
+                    "Priority": t.priority,
+                    "Recurs": t.recurrence,
+                    "Status": "✅ done" if t.completed else "⬜ pending",
+                }
+                for t in tasks
+            ]
+        )
+    else:
+        st.caption("No tasks match this filter.")
+
+    # Completing a task advances recurring ones to their next occurrence.
+    pending_pairs = [(pet, t) for pet in owner.pets for t in pet.tasks if not t.completed]
+    if pending_pairs:
+        with st.form("complete_form"):
+            choice = st.selectbox(
+                "Mark a task complete",
+                range(len(pending_pairs)),
+                format_func=lambda i: f"{pending_pairs[i][0].name}: {pending_pairs[i][1].title}",
+            )
+            if st.form_submit_button("Mark complete"):
+                pet, task = pending_pairs[choice]
+                follow_up = pet.complete_task(task)
+                if follow_up is not None:
+                    st.success(
+                        f"Completed '{task.title}'. Next {task.recurrence} occurrence "
+                        f"auto-scheduled for {follow_up.due_date}."
+                    )
+                else:
+                    st.success(f"Completed '{task.title}'.")
+                st.rerun()
+
+st.divider()
+
 # --- Generate Schedule ----------------------------------------------------
 st.subheader("🗓️ Generate Schedule")
 if st.button("Generate schedule", type="primary"):
     if not owner.all_tasks():
         st.warning("No tasks yet. Add some tasks first.")
     else:
-        scheduler = Scheduler(owner)
         plan = scheduler.build_plan(date.today())
 
         if not plan:
@@ -138,8 +202,19 @@ if st.button("Generate schedule", type="primary"):
                 ]
             )
 
-            for warning in scheduler.conflict_warnings(plan):
-                st.error(f"⚠️ {warning}")
+            # A conflict is advisory, not fatal: show a non-blocking amber
+            # warning with guidance rather than a red error, and confirm with
+            # a green success when the day is clean.
+            warnings = scheduler.conflict_warnings(plan)
+            if warnings:
+                st.warning(
+                    "⚠️ Some tasks overlap. Fixed-time tasks aren't moved automatically — "
+                    "consider adjusting one task in each pair below:"
+                )
+                for w in warnings:
+                    st.markdown(f"- {w}")
+            else:
+                st.success("No scheduling conflicts. 🎉")
 
             with st.expander("Why this plan?"):
                 st.text(scheduler.explain(plan))
