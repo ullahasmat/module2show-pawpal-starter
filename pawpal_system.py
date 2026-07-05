@@ -101,6 +101,7 @@ class Scheduler:
     """Turns an owner's tasks + constraints into an ordered daily plan."""
 
     def __init__(self, owner: Owner) -> None:
+        """Bind the scheduler to the owner whose tasks it will plan."""
         self.owner = owner
 
     def available_minutes(self) -> int:
