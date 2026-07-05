@@ -9,6 +9,7 @@ be driven and tested from a plain CLI script.
 from __future__ import annotations
 
 import itertools
+import json
 from dataclasses import dataclass, field, replace
 from datetime import date, time, timedelta
 from typing import Optional
@@ -26,6 +27,16 @@ def _from_minutes(m: int) -> time:
     """Convert minutes since midnight back to a time, clamped to a valid day."""
     m = max(0, min(m, 24 * 60 - 1))
     return time(hour=m // 60, minute=m % 60)
+
+
+def _time_to_str(t: Optional[time]) -> Optional[str]:
+    """Serialize a time as 'HH:MM' (or None) for JSON storage."""
+    return t.strftime("%H:%M") if t is not None else None
+
+
+def _str_to_time(s: Optional[str]) -> Optional[time]:
+    """Parse an 'HH:MM' string back into a time (or None)."""
+    return time.fromisoformat(s) if s else None
 
 
 @dataclass
@@ -65,6 +76,36 @@ class Task:
             return None
         base = self.due_date or date.today()
         return replace(self, completed=False, due_date=base + step)
+
+    def to_dict(self) -> dict:
+        """Return a JSON-serializable dict of this task (times/dates as strings)."""
+        return {
+            "title": self.title,
+            "duration_minutes": self.duration_minutes,
+            "priority": self.priority,
+            "category": self.category,
+            "recurrence": self.recurrence,
+            "fixed_time": _time_to_str(self.fixed_time),
+            "weekday": self.weekday,
+            "completed": self.completed,
+            "due_date": self.due_date.isoformat() if self.due_date else None,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Task":
+        """Rebuild a Task from a dict produced by to_dict()."""
+        due = data.get("due_date")
+        return cls(
+            title=data["title"],
+            duration_minutes=data["duration_minutes"],
+            priority=data.get("priority", "medium"),
+            category=data.get("category", "general"),
+            recurrence=data.get("recurrence", "none"),
+            fixed_time=_str_to_time(data.get("fixed_time")),
+            weekday=data.get("weekday"),
+            completed=data.get("completed", False),
+            due_date=date.fromisoformat(due) if due else None,
+        )
 
 
 @dataclass
@@ -106,6 +147,26 @@ class Pet:
             self.tasks.append(follow_up)
         return follow_up
 
+    def to_dict(self) -> dict:
+        """Return a JSON-serializable dict of this pet and its tasks."""
+        return {
+            "name": self.name,
+            "species": self.species,
+            "breed": self.breed,
+            "tasks": [t.to_dict() for t in self.tasks],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Pet":
+        """Rebuild a Pet (and its tasks) from a dict produced by to_dict()."""
+        pet = cls(
+            name=data["name"],
+            species=data.get("species", ""),
+            breed=data.get("breed", ""),
+        )
+        pet.tasks = [Task.from_dict(t) for t in data.get("tasks", [])]
+        return pet
+
 
 @dataclass
 class Owner:
@@ -124,6 +185,39 @@ class Owner:
     def all_tasks(self) -> list[Task]:
         """Collect the tasks across every pet this owner has."""
         return [task for pet in self.pets for task in pet.tasks]
+
+    def to_dict(self) -> dict:
+        """Return a JSON-serializable dict of the owner, pets, and tasks."""
+        return {
+            "name": self.name,
+            "available_start": _time_to_str(self.available_start),
+            "available_end": _time_to_str(self.available_end),
+            "preferred_categories": list(self.preferred_categories),
+            "pets": [p.to_dict() for p in self.pets],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Owner":
+        """Rebuild an Owner (with all pets and tasks) from a dict."""
+        owner = cls(
+            name=data["name"],
+            available_start=_str_to_time(data["available_start"]),
+            available_end=_str_to_time(data["available_end"]),
+            preferred_categories=list(data.get("preferred_categories", [])),
+        )
+        owner.pets = [Pet.from_dict(p) for p in data.get("pets", [])]
+        return owner
+
+    def save_to_json(self, path: str = "data.json") -> None:
+        """Persist this owner (and all pets/tasks) to a JSON file."""
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self.to_dict(), f, indent=2)
+
+    @classmethod
+    def load_from_json(cls, path: str = "data.json") -> "Owner":
+        """Load an owner (and all pets/tasks) back from a JSON file."""
+        with open(path, "r", encoding="utf-8") as f:
+            return cls.from_dict(json.load(f))
 
 
 class Scheduler:

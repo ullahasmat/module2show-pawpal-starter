@@ -146,6 +146,32 @@ dropping any that no longer fit.
 | Recurring tasks | `Scheduler.expand_recurring()`, `Task.next_occurrence()`, `Pet.complete_task()` | `expand_recurring` selects tasks due on a given day (`daily`, or `weekly` matched to a weekday). Completing a recurring task via `complete_task` auto-spawns its next occurrence, advancing the due date with `timedelta` (daily → +1 day, weekly → +1 week). |
 | Next available slot | `Scheduler.next_available_slot()` | Given a duration, returns the earliest free `(start, end)` window in the day (or `None` if it can't fit), reusing the planner's earliest-fit search over the current plan. |
 
+## 💾 Data Persistence
+
+PawPal+ remembers your pets and tasks between runs by saving them to a
+`data.json` file in the project root.
+
+**How it works**
+
+- Each class converts itself to and from a plain dict (`to_dict()` /
+  `from_dict()`). This handles the fields JSON can't store natively: `time`
+  values are saved as `"HH:MM"` strings and `date` values as ISO strings.
+- `Owner.save_to_json(path)` writes the full owner → pets → tasks tree to JSON;
+  `Owner.load_from_json(path)` rebuilds the objects from that file.
+- In the Streamlit app, the owner is loaded from `data.json` on a cold start (if
+  the file exists) and auto-saved back to `data.json` at the end of every run,
+  so any change survives a restart. The sidebar **Reset** button deletes
+  `data.json` so the reset sticks.
+- `data.json` is user data, not code, so it is listed in `.gitignore`.
+
+**Files modified for persistence**
+
+- `pawpal_system.py` — added `to_dict`/`from_dict` to `Task`, `Pet`, and
+  `Owner`, plus `Owner.save_to_json()` and `Owner.load_from_json()`.
+- `app.py` — load on cold start, auto-save each run, and clear the file on reset.
+- `tests/test_pawpal.py` — a round-trip test (save then load preserves data).
+- `.gitignore` — ignores the generated `data.json`.
+
 ## 📸 Demo Walkthrough
 
 ### Running the app

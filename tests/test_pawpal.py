@@ -221,3 +221,38 @@ def test_next_available_slot_returns_none_when_day_is_full():
     scheduler = Scheduler(owner)
 
     assert scheduler.next_available_slot(date(2026, 7, 5), 30) is None
+
+
+# --- JSON persistence -----------------------------------------------------
+
+def test_owner_json_round_trip(tmp_path):
+    """Saving an owner to JSON and loading it back preserves pets and tasks."""
+    owner = Owner("Jordan", time(7, 0), time(20, 0), preferred_categories=["walk"])
+    pet = Pet("Mochi", "dog", "Shiba")
+    pet.add_task(
+        Task(
+            "Walk",
+            30,
+            priority="high",
+            fixed_time=time(8, 0),
+            recurrence="daily",
+            due_date=date(2026, 7, 5),
+        )
+    )
+    owner.add_pet(pet)
+    path = tmp_path / "data.json"
+
+    owner.save_to_json(path)
+    loaded = Owner.load_from_json(path)
+
+    assert loaded.name == "Jordan"
+    assert loaded.available_start == time(7, 0)
+    assert loaded.preferred_categories == ["walk"]
+    assert len(loaded.pets) == 1
+    assert loaded.pets[0].name == "Mochi"
+
+    task = loaded.pets[0].tasks[0]
+    assert task.title == "Walk"
+    assert task.fixed_time == time(8, 0)          # time survived the round trip
+    assert task.recurrence == "daily"
+    assert task.due_date == date(2026, 7, 5)      # date survived the round trip

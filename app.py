@@ -1,3 +1,4 @@
+import os
 from datetime import date, time
 
 import streamlit as st
@@ -6,18 +7,27 @@ from pawpal_system import Owner, Pet, Scheduler, Task
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
-# --- Session memory -------------------------------------------------------
+# --- Session memory + persistence -----------------------------------------
 # Streamlit reruns this whole script top-to-bottom on every click, so any
 # object we want to keep (the Owner and their pets) must live in
-# st.session_state -- the "vault" that persists across reruns. Check whether
-# the Owner already exists before creating a fresh (empty) one, otherwise it
-# would be reborn empty on every interaction.
+# st.session_state -- the "vault" that persists across reruns.
+#
+# On a cold start (a brand-new process) there is no owner in the session yet,
+# so we load one from data.json if it exists -- that is what lets pets and
+# tasks survive between application runs. Later reruns keep the in-memory owner
+# and never re-read the file. The script auto-saves back to data.json at the
+# bottom of every run.
+DATA_FILE = "data.json"
+
 if "owner" not in st.session_state:
-    st.session_state.owner = Owner(
-        name="Jordan",
-        available_start=time(7, 0),
-        available_end=time(20, 0),
-    )
+    if os.path.exists(DATA_FILE):
+        st.session_state.owner = Owner.load_from_json(DATA_FILE)
+    else:
+        st.session_state.owner = Owner(
+            name="Jordan",
+            available_start=time(7, 0),
+            available_end=time(20, 0),
+        )
 
 owner: Owner = st.session_state.owner
 scheduler = Scheduler(owner)  # cheap wrapper; recreated each rerun around the persisted owner
@@ -35,8 +45,12 @@ with st.sidebar:
     owner.available_end = st.time_input("Day ends", value=owner.available_end)
 
     if st.button("Reset (clear pets & tasks)"):
+        if os.path.exists(DATA_FILE):
+            os.remove(DATA_FILE)  # wipe saved data so the reset sticks next run
         del st.session_state.owner
         st.rerun()
+
+    st.caption("💾 Your pets and tasks auto-save to data.json.")
 
 # --- Add a Pet ------------------------------------------------------------
 st.subheader("🐕 Add a Pet")
@@ -240,3 +254,8 @@ if st.button("Generate schedule", type="primary"):
 
             with st.expander("Why this plan?"):
                 st.text(scheduler.explain(plan))
+
+# --- Persist everything at the end of each run ----------------------------
+# Any change made this run (owner name, window, pets, tasks, completions) is
+# written back to data.json so it is there on the next run.
+owner.save_to_json(DATA_FILE)
