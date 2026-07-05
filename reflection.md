@@ -60,8 +60,27 @@ new `weekday` attribute.
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+My `build_plan` uses **greedy earliest-fit placement**: it anchors fixed-time
+tasks, then walks the flexible tasks in priority order and drops the ones that
+no longer fit inside the owner's available window. The tradeoff is that it is
+*not* an optimal packer -- it can drop a low-priority task even when a smarter
+algorithm could have rearranged the day to squeeze it in.
+
+This is reasonable for the scenario for three reasons: (1) a pet owner's day
+has only a handful of tasks, so the difference between greedy and optimal is
+usually zero; (2) greedy placement is predictable and easy to explain to the
+user ("highest priority first, earliest free slot"), which matters more than
+theoretical optimality for a trust-based planning tool; and (3) it degrades
+gracefully -- when the day is over-full, it keeps the important tasks and drops
+the least important, which is exactly what a busy owner would want.
+
+A related tradeoff: for fixed-time overlaps the scheduler **detects and warns
+rather than auto-resolving**. It will not silently move a task the owner pinned
+to a specific time (e.g. medication at 08:00), because respecting the owner's
+explicit intent is safer than an automatic reschedule. Notably, the overlap
+check uses full duration ranges (`start < other.end and other.start < end`),
+not just exact start-time matches, so a task starting mid-way through another
+is still flagged.
 
 ---
 
