@@ -71,6 +71,14 @@ def main() -> None:
         when = t.fixed_time.strftime("%H:%M") if t.fixed_time else "--:-- (flexible)"
         print(f"  {when}  {t.title} [{t.priority}]")
 
+    # --- Priority-based scheduling: priority first, then time ----------------
+    print("\n" + "=" * 48)
+    print("  All tasks by priority, then time")
+    print("=" * 48)
+    for t in scheduler.sort_by_priority_then_time(owner.all_tasks()):
+        when = t.fixed_time.strftime("%H:%M") if t.fixed_time else "flexible"
+        print(f"  [{t.priority:>6}] {when:>8}  {t.title}")
+
     # --- Filtering: by pet ---------------------------------------------------
     print("\n" + "=" * 48)
     print("  Filter: Mochi's tasks only")

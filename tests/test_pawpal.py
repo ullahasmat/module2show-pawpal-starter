@@ -72,6 +72,25 @@ def test_sort_tasks_orders_by_priority():
     assert ordered == ["High job", "Medium job", "Low job"]
 
 
+def test_sort_by_priority_then_time():
+    """Priority is the primary key; time only breaks ties within a priority.
+
+    'Low early' is the earliest task but sorts last because it is low priority.
+    """
+    owner = make_owner()
+    scheduler = Scheduler(owner)
+    tasks = [
+        Task("High late", 10, priority="high", fixed_time=time(18, 0)),
+        Task("Low early", 10, priority="low", fixed_time=time(7, 0)),
+        Task("High early", 10, priority="high", fixed_time=time(8, 0)),
+        Task("Medium", 10, priority="medium", fixed_time=time(9, 0)),
+    ]
+
+    ordered = [t.title for t in scheduler.sort_by_priority_then_time(tasks)]
+
+    assert ordered == ["High early", "High late", "Medium", "Low early"]
+
+
 # --- Filtering ------------------------------------------------------------
 
 def test_filter_by_pet_returns_only_that_pets_tasks():

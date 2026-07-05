@@ -258,6 +258,23 @@ class Scheduler:
             ),
         )
 
+    def sort_by_priority_then_time(self, tasks: list[Task]) -> list[Task]:
+        """Order tasks by priority first (high -> low), then by time within each
+        priority level (timed tasks chronologically, flexible ones last).
+
+        This is stronger than sorting by time alone: a high-priority task always
+        precedes a lower-priority one even if the lower-priority task is earlier
+        in the day.
+        """
+        return sorted(
+            tasks,
+            key=lambda t: (
+                -t.priority_rank(),  # priority is the primary key
+                t.fixed_time is None,  # then timed tasks before flexible
+                _to_minutes(t.fixed_time) if t.fixed_time is not None else 0,
+            ),
+        )
+
     def filter_by_pet(self, pet_name: str) -> list[Task]:
         """Return the tasks belonging to the pet with the given name."""
         for pet in self.owner.pets:

@@ -36,6 +36,8 @@ UI (`app.py`).
   the owner's available window, dropping tasks that don't fit.
 - **Sorting by time** — `sort_by_time()` orders tasks chronologically, keeping
   untimed (flexible) tasks at the end; `sort_tasks()` orders by priority.
+- **Priority-based ordering** — `sort_by_priority_then_time()` sorts by priority
+  first, then by time within each level, so important tasks always come first.
 - **Filtering** — `filter_by_pet()` narrows tasks to one pet; `filter_by_status()`
   separates pending from completed tasks.
 - **Recurring tasks** — completing a `daily` or `weekly` task auto-creates its
@@ -141,10 +143,36 @@ dropping any that no longer fit.
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
 | Task sorting | `Scheduler.sort_tasks()`, `Scheduler.sort_by_time()` | `sort_tasks` orders by priority (high→low), then shortest duration as a tiebreaker. `sort_by_time` orders chronologically by `fixed_time`, pushing flexible (untimed) tasks to the end. |
+| Priority scheduling | `Scheduler.sort_by_priority_then_time()` | Orders by priority (high→low) first, then by time within each level, so a high-priority task always precedes a lower-priority one even if the lower one is earlier in the day. |
 | Filtering | `Scheduler.filter_by_pet()`, `Scheduler.filter_by_status()` | Filter tasks down to a single pet by name, or by completion status (`completed=False` returns pending tasks, `True` returns finished ones). |
 | Conflict handling | `Scheduler.detect_conflicts()`, `Scheduler.conflict_warnings()` | `detect_conflicts` returns overlapping pairs using full duration ranges (not just exact start times); `conflict_warnings` turns them into readable, non-crashing warning strings. Catches same-pet and cross-pet clashes. |
 | Recurring tasks | `Scheduler.expand_recurring()`, `Task.next_occurrence()`, `Pet.complete_task()` | `expand_recurring` selects tasks due on a given day (`daily`, or `weekly` matched to a weekday). Completing a recurring task via `complete_task` auto-spawns its next occurrence, advancing the due date with `timedelta` (daily → +1 day, weekly → +1 week). |
 | Next available slot | `Scheduler.next_available_slot()` | Given a duration, returns the earliest free `(start, end)` window in the day (or `None` if it can't fit), reusing the planner's earliest-fit search over the current plan. |
+
+### Priority-based scheduling (CLI example)
+
+`sort_by_priority_then_time()` orders tasks by priority first, then by time
+within each priority level — so a high-priority task always comes before a
+lower-priority one, even when the lower-priority task is earlier in the day.
+Output from `python main.py`:
+
+```
+================================================
+  All tasks by priority, then time
+================================================
+  [  high]    07:30  Breakfast
+  [  high]    07:30  Medication
+  [  high]    07:45  Feeding
+  [  high]    08:00  Morning walk
+  [medium]    18:00  Evening walk
+  [medium] flexible  Clean litter box
+  [   low] flexible  Enrichment puzzle
+  [   low] flexible  Play / laser
+```
+
+All four `high` tasks are grouped first (ordered by time among themselves),
+then `medium`, then `low` — priority is the primary key and time only breaks
+ties within a level.
 
 ## 💾 Data Persistence
 
