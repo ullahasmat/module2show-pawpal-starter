@@ -22,6 +22,31 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+## ✨ Features
+
+PawPal+ turns a list of pet care tasks into an ordered daily plan. The
+scheduling logic lives in `pawpal_system.py` and is exposed through a Streamlit
+UI (`app.py`).
+
+- **Owner / Pet / Task model** — one owner has many pets, each pet has many
+  tasks; tasks carry a duration, priority, category, recurrence, and an
+  optional fixed start time.
+- **Priority-aware daily planning** — `build_plan()` anchors fixed-time tasks,
+  then greedily places the rest by priority into the earliest free slot inside
+  the owner's available window, dropping tasks that don't fit.
+- **Sorting by time** — `sort_by_time()` orders tasks chronologically, keeping
+  untimed (flexible) tasks at the end; `sort_tasks()` orders by priority.
+- **Filtering** — `filter_by_pet()` narrows tasks to one pet; `filter_by_status()`
+  separates pending from completed tasks.
+- **Recurring tasks** — completing a `daily` or `weekly` task auto-creates its
+  next occurrence, advancing the due date with `timedelta` (daily → +1 day,
+  weekly → +7 days).
+- **Conflict warnings** — `conflict_warnings()` flags overlapping tasks (same
+  pet or different pets) with a readable, non-crashing message.
+- **Plan explanations** — `explain()` prints why the plan looks the way it does.
+- **Tested** — 15 pytest cases cover sorting, filtering, recurrence, conflicts,
+  and edge cases.
+
 ## Getting started
 
 ### Setup
@@ -44,9 +69,9 @@ pip install -r requirements.txt
 
 ## 🖥️ Sample Output
 
-Running the CLI demo (`python main.py`) produces the schedule below. It builds
-one owner (Jordan) with two pets and seven tasks, then prints the plan the
-scheduler generates:
+Running the CLI demo (`python main.py`) builds one owner (Jordan) with two pets
+and eight tasks, then prints the plan the scheduler generates. Two tasks are
+deliberately set to 07:30 to demonstrate conflict detection:
 
 ```
 ================================================
@@ -55,13 +80,15 @@ scheduler generates:
 Daily plan for Jordan (window 07:00-20:00):
   07:00-07:05  Clean litter box for Luna (5 min, medium priority)
   07:05-07:20  Play / laser for Luna (15 min, low priority)
+  07:30-07:35  Medication for Mochi (5 min, high priority) [fixed]
   07:30-07:40  Breakfast for Mochi (10 min, high priority) [fixed]
   07:45-07:55  Feeding for Luna (10 min, high priority) [fixed]
   08:00-08:30  Morning walk for Mochi (30 min, high priority) [fixed]
   08:30-08:50  Enrichment puzzle for Mochi (20 min, low priority)
   18:00-18:30  Evening walk for Mochi (30 min, medium priority) [fixed]
+Warning -- 'Medication' (Mochi, 07:30-07:35) overlaps 'Breakfast' (Mochi, 07:30-07:40) [same pet]
 ------------------------------------------------
-7 task(s) planned across 2 pet(s).
+8 task(s) planned across 2 pet(s).
 ```
 
 Fixed-time tasks are anchored to their exact time (`[fixed]`); flexible tasks
@@ -118,12 +145,98 @@ dropping any that no longer fit.
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+### Running the app
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+```bash
+python -m streamlit run app.py
+```
 
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+### What the UI lets you do
+
+- **Sidebar — Owner:** set the owner's name and their available time window
+  (when tasks may be scheduled), or reset everything.
+- **Add a Pet:** enter a name, species, and optional breed. Submitting creates
+  a real `Pet` object stored in `st.session_state`, so it persists across reruns.
+- **Add a Task:** pick a pet, then set title, duration, priority, category,
+  recurrence, and (optionally) a fixed start time or weekly weekday.
+- **Tasks & Completion:** view tasks in time order, filter them by pet or by
+  status (pending / completed / all), and mark a task complete.
+- **Generate Schedule:** build today's plan and read the explanation of why it
+  looks the way it does.
+
+### Example workflow
+
+1. In the sidebar, set the owner and available window (e.g. 07:00–20:00).
+2. **Add a pet** — e.g. "Mochi" the dog.
+3. **Add a few tasks** — a fixed 07:30 "Breakfast", a high-priority "Morning
+   walk", and a `daily` "Enrichment puzzle".
+4. Open **Tasks & Completion** to see them sorted by time; filter to just Mochi.
+5. **Mark the daily task complete** — PawPal+ confirms it and auto-schedules the
+   next occurrence for tomorrow.
+6. Click **Generate Schedule** to see the ordered, time-boxed plan.
+
+### Key Scheduler behaviors shown
+
+- **Sorting** — the plan is ordered chronologically; flexible tasks fill gaps by
+  priority.
+- **Filtering** — the Tasks panel narrows by pet and by completion status.
+- **Recurring auto-advance** — completing a daily/weekly task spawns its next
+  occurrence.
+- **Conflict warnings** — two tasks at the same time raise a non-blocking amber
+  warning naming both tasks and their times.
+
+### Sample CLI output (`python main.py`)
+
+The demo script exercises the same logic without the UI. Note the 07:30 clash
+that triggers a conflict warning, the chronological re-sort of out-of-order
+tasks, the pet/status filters, and the recurring task spawning its next
+occurrence:
+
+```
+================================================
+  Today's Schedule  (Sunday, July 05, 2026)
+================================================
+Daily plan for Jordan (window 07:00-20:00):
+  07:00-07:05  Clean litter box for Luna (5 min, medium priority)
+  07:05-07:20  Play / laser for Luna (15 min, low priority)
+  07:30-07:35  Medication for Mochi (5 min, high priority) [fixed]
+  07:30-07:40  Breakfast for Mochi (10 min, high priority) [fixed]
+  07:45-07:55  Feeding for Luna (10 min, high priority) [fixed]
+  08:00-08:30  Morning walk for Mochi (30 min, high priority) [fixed]
+  08:30-08:50  Enrichment puzzle for Mochi (20 min, low priority)
+  18:00-18:30  Evening walk for Mochi (30 min, medium priority) [fixed]
+Warning -- 'Medication' (Mochi, 07:30-07:35) overlaps 'Breakfast' (Mochi, 07:30-07:40) [same pet]
+------------------------------------------------
+8 task(s) planned across 2 pet(s).
+
+================================================
+  All tasks sorted by time
+================================================
+  07:30  Breakfast [high]
+  07:30  Medication [high]
+  07:45  Feeding [high]
+  08:00  Morning walk [high]
+  18:00  Evening walk [medium]
+  --:-- (flexible)  Clean litter box [medium]
+  --:-- (flexible)  Enrichment puzzle [low]
+  --:-- (flexible)  Play / laser [low]
+
+================================================
+  Filter: Mochi's tasks only
+================================================
+  - Breakfast
+  - Medication
+  - Morning walk
+  - Evening walk
+  - Enrichment puzzle
+
+================================================
+  Recurring: complete a daily task -> next instance spawns
+================================================
+  Before: Mochi has 5 task(s).
+  Completed 'Enrichment puzzle' (recurrence=daily).
+  Auto-created next occurrence due 2026-07-06 (completed=False).
+  After: Mochi has 6 task(s).
+```
+
+**Screenshots** *(optional, for human reviewers)*: <!-- Insert screenshots of the Streamlit app here if you like -->
