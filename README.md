@@ -77,18 +77,29 @@ python -m pytest
 python -m pytest --cov
 ```
 
+**What the tests cover** (`tests/test_pawpal.py`, 15 tests):
+
+- **Model basics** — marking a task complete flips its status; adding a task grows a pet's task list.
+- **Sorting** — `sort_by_time` returns timed tasks in clock order with flexible tasks last; `sort_tasks` orders by priority.
+- **Filtering** — `filter_by_pet` (including an unknown-pet → empty case) and `filter_by_status` (excludes completed tasks).
+- **Recurrence** — completing a daily task spawns a copy due the next day; weekly advances +7 days; a non-recurring task returns `None`; weekly tasks only appear on their weekday.
+- **Conflict detection** — two tasks at the same time are flagged; tasks that merely touch at a boundary are not.
+- **Planning edge cases** — an owner with no tasks yields an empty plan; a task too long for the available window is dropped.
+
 Sample test output:
 
 ```
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.5, pytest-9.1.1, pluggy-1.6.0
 rootdir: /Users/pjasmat/codepath/AI/module2show-pawpal-starter
-collected 2 items
+collected 15 items
 
-tests/test_pawpal.py ..                                                  [100%]
+tests/test_pawpal.py ...............                                     [100%]
 
-============================== 2 passed in 0.01s ===============================
+============================== 15 passed in 0.02s ===============================
 ```
+
+**Confidence level: ★★★★☆ (4/5).** The core scheduling logic — sorting, filtering, recurrence, and conflict detection — is covered by focused happy-path and edge-case tests that all pass. I held back the fifth star because a few areas are still untested: overlapping *flexible* tasks packed around several fixed-time anchors, invalid input (e.g. an unknown priority string), and cross-pet conflicts. Those are the first cases I'd add next.
 
 ## 📐 Smarter Scheduling
 
