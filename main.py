@@ -100,6 +100,17 @@ def main() -> None:
               f"(completed={follow_up.completed}).")
     print(f"  After: Mochi has {len(mochi.tasks)} task(s).")
 
+    # --- Advanced: find the earliest free slot for a new task ----------------
+    print("\n" + "=" * 48)
+    print("  Next available slot for a 45-minute task")
+    print("=" * 48)
+    slot = scheduler.next_available_slot(today, 45)
+    if slot:
+        start, end = slot
+        print(f"  You could fit a 45-min task at {start:%H:%M}-{end:%H:%M}.")
+    else:
+        print("  No 45-minute slot is free today.")
+
 
 if __name__ == "__main__":
     main()

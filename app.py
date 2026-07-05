@@ -177,6 +177,28 @@ else:
 
 st.divider()
 
+# --- Find a free slot (advanced capability) -------------------------------
+if owner.all_tasks():
+    with st.expander("🔍 Find a free slot for a new task"):
+        slot_minutes = st.number_input(
+            "How many minutes do you need?", min_value=5, max_value=240, value=30, step=5
+        )
+        if st.button("Find earliest free slot"):
+            slot = scheduler.next_available_slot(date.today(), int(slot_minutes))
+            if slot:
+                start, end = slot
+                st.success(
+                    f"Earliest {int(slot_minutes)}-minute slot today: "
+                    f"{start.strftime('%H:%M')}–{end.strftime('%H:%M')}"
+                )
+            else:
+                st.warning(
+                    "No free slot that long today. Try a shorter task or widen the "
+                    "available window in the sidebar."
+                )
+
+    st.divider()
+
 # --- Generate Schedule ----------------------------------------------------
 st.subheader("🗓️ Generate Schedule")
 if st.button("Generate schedule", type="primary"):

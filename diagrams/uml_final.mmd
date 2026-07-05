@@ -53,6 +53,7 @@ classDiagram
         +filter_by_status(completed bool) list~Task~
         +expand_recurring(tasks list~Task~, day date) list~Task~
         +build_plan(day date) list~ScheduledTask~
+        +next_available_slot(day date, duration_minutes int) tuple
         +detect_conflicts(plan list~ScheduledTask~) list
         +conflict_warnings(plan list~ScheduledTask~) list~str~
         +explain(plan list~ScheduledTask~) str

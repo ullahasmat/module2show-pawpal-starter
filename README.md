@@ -43,6 +43,8 @@ UI (`app.py`).
   weekly → +7 days).
 - **Conflict warnings** — `conflict_warnings()` flags overlapping tasks (same
   pet or different pets) with a readable, non-crashing message.
+- **Next available slot** — `next_available_slot()` answers "when could I fit a
+  new task?" by finding the earliest free window of a given length in the day.
 - **Plan explanations** — `explain()` prints why the plan looks the way it does.
 - **Tested** — 15 pytest cases cover sorting, filtering, recurrence, conflicts,
   and edge cases.
@@ -142,6 +144,7 @@ dropping any that no longer fit.
 | Filtering | `Scheduler.filter_by_pet()`, `Scheduler.filter_by_status()` | Filter tasks down to a single pet by name, or by completion status (`completed=False` returns pending tasks, `True` returns finished ones). |
 | Conflict handling | `Scheduler.detect_conflicts()`, `Scheduler.conflict_warnings()` | `detect_conflicts` returns overlapping pairs using full duration ranges (not just exact start times); `conflict_warnings` turns them into readable, non-crashing warning strings. Catches same-pet and cross-pet clashes. |
 | Recurring tasks | `Scheduler.expand_recurring()`, `Task.next_occurrence()`, `Pet.complete_task()` | `expand_recurring` selects tasks due on a given day (`daily`, or `weekly` matched to a weekday). Completing a recurring task via `complete_task` auto-spawns its next occurrence, advancing the due date with `timedelta` (daily → +1 day, weekly → +1 week). |
+| Next available slot | `Scheduler.next_available_slot()` | Given a duration, returns the earliest free `(start, end)` window in the day (or `None` if it can't fit), reusing the planner's earliest-fit search over the current plan. |
 
 ## 📸 Demo Walkthrough
 

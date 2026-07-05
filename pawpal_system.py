@@ -266,6 +266,25 @@ class Scheduler:
         plan.sort(key=lambda s: (_to_minutes(s.start), _to_minutes(s.end)))
         return plan
 
+    def next_available_slot(
+        self, day: date, duration_minutes: int
+    ) -> Optional[tuple[time, time]]:
+        """Find the earliest free (start, end) window of ``duration_minutes``
+        in the day's plan, or None if nothing that long fits.
+
+        Answers "when could I fit a new task?" -- it builds the current plan,
+        treats every scheduled task as busy time, and reuses the same
+        earliest-fit search the planner uses to place flexible tasks.
+        """
+        plan = self.build_plan(day)
+        busy = [(_to_minutes(s.start), _to_minutes(s.end)) for s in plan]
+        window_start = _to_minutes(self.owner.available_start)
+        window_end = _to_minutes(self.owner.available_end)
+        start = self._earliest_free(window_start, window_end, duration_minutes, busy)
+        if start is None:
+            return None
+        return (_from_minutes(start), _from_minutes(start + duration_minutes))
+
     def detect_conflicts(
         self, plan: list[ScheduledTask]
     ) -> list[tuple[ScheduledTask, ScheduledTask]]:

@@ -199,3 +199,25 @@ def test_task_too_long_for_window_is_dropped():
     plan = scheduler.build_plan(date(2026, 7, 5))
 
     assert plan == []
+
+
+# --- Next available slot (advanced capability) ----------------------------
+
+def test_next_available_slot_finds_gap_after_fixed_task():
+    """The earliest free slot starts right after an existing fixed task."""
+    owner = make_owner(start=time(8, 0), end=time(10, 0))
+    owner.pets[0].add_task(Task("Walk", 30, fixed_time=time(8, 0)))  # 08:00-08:30
+    scheduler = Scheduler(owner)
+
+    slot = scheduler.next_available_slot(date(2026, 7, 5), 30)
+
+    assert slot == (time(8, 30), time(9, 0))
+
+
+def test_next_available_slot_returns_none_when_day_is_full():
+    """When the window is already filled, no slot is returned."""
+    owner = make_owner(start=time(8, 0), end=time(8, 30))
+    owner.pets[0].add_task(Task("Walk", 30, fixed_time=time(8, 0)))  # fills 08:00-08:30
+    scheduler = Scheduler(owner)
+
+    assert scheduler.next_available_slot(date(2026, 7, 5), 30) is None
