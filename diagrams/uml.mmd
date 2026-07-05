@@ -27,7 +27,15 @@ classDiagram
         +str category
         +str recurrence
         +time fixed_time
+        +int weekday
         +int priority_rank() int
+    }
+
+    class ScheduledTask {
+        +Task task
+        +time start
+        +time end
+        +str pet_name
     }
 
     class Scheduler {
@@ -43,4 +51,5 @@ classDiagram
     Owner "1" --> "*" Pet : owns
     Pet "1" --> "*" Task : has
     Scheduler "1" --> "1" Owner : plans for
-    Scheduler ..> Task : orders
+    Scheduler ..> ScheduledTask : produces
+    ScheduledTask "1" --> "1" Task : wraps

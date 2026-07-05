@@ -25,10 +25,25 @@ class Task:
     category: str = "general"
     recurrence: str = "none"  # "none" | "daily" | "weekly"
     fixed_time: Optional[time] = None  # set when the task must happen at a specific time
+    weekday: Optional[int] = None  # 0=Mon .. 6=Sun; anchors a "weekly" recurrence
 
     def priority_rank(self) -> int:
         """Return a numeric rank so tasks can be sorted by urgency."""
         raise NotImplementedError
+
+
+@dataclass
+class ScheduledTask:
+    """A Task placed on the day's timeline with a concrete start/end.
+
+    A daily plan is a list of these, not raw Tasks -- this is what lets the
+    scheduler time-box the day and detect overlaps.
+    """
+
+    task: Task
+    start: time
+    end: time
+    pet_name: str = ""  # which pet the task belongs to, for display
 
 
 @dataclass
@@ -82,14 +97,16 @@ class Scheduler:
         """Materialize recurring tasks that are due on the given day."""
         raise NotImplementedError
 
-    def detect_conflicts(self, plan: list) -> list:
-        """Find overlapping fixed-time tasks in a proposed plan."""
+    def detect_conflicts(
+        self, plan: list[ScheduledTask]
+    ) -> list[tuple[ScheduledTask, ScheduledTask]]:
+        """Find pairs of scheduled tasks whose time ranges overlap."""
         raise NotImplementedError
 
-    def build_plan(self, day: date) -> list:
+    def build_plan(self, day: date) -> list[ScheduledTask]:
         """Produce the ordered, time-boxed plan for the given day."""
         raise NotImplementedError
 
-    def explain(self, plan: list) -> str:
+    def explain(self, plan: list[ScheduledTask]) -> str:
         """Return a human-readable explanation of why the plan looks this way."""
         raise NotImplementedError

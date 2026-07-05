@@ -4,13 +4,50 @@
 
 **a. Initial design**
 
-- Briefly describe your initial UML design.
-- What classes did you include, and what responsibilities did you assign to each?
+My initial UML has four classes, each with a single clear responsibility:
+
+- **Owner** — represents the person planning care. Holds their name, their
+  available time window (`available_start`/`available_end`), preferred task
+  categories, and the list of pets they own. It can register a pet
+  (`add_pet`) and gather every task across its pets (`all_tasks`).
+- **Pet** — a dataclass holding a pet's `name`, `species`, `breed`, and the
+  list of care `tasks` that belong to it. It can attach a task (`add_task`).
+- **Task** — a dataclass for one unit of care work: `title`,
+  `duration_minutes`, `priority`, `category`, `recurrence`, and an optional
+  `fixed_time` for tasks that must happen at a set time. `priority_rank()`
+  converts the priority label into a number so tasks can be sorted.
+- **Scheduler** — the algorithm layer. It takes an Owner and turns their
+  tasks plus constraints into an ordered daily plan (`build_plan`), with
+  helpers to sort by priority (`sort_tasks`), expand recurring tasks
+  (`expand_recurring`), detect time conflicts (`detect_conflicts`), and
+  explain its choices (`explain`).
+
+Relationships: an Owner *owns* many Pets, each Pet *has* many Tasks, and the
+Scheduler *plans for* one Owner while *ordering* its Tasks. I kept data
+(Owner/Pet/Task) separate from behavior (Scheduler) so the scheduling logic
+can be tested independently of the UI.
 
 **b. Design changes**
 
-- Did your design change during implementation?
-- If yes, describe at least one change and why you made it.
+Yes. After asking my AI assistant to review the skeleton for missing
+relationships and logic bottlenecks, I made two changes:
+
+1. **Added a `ScheduledTask` class.** My original plan was just a
+   `list[Task]`, but a raw `Task` only knows its *duration* and an optional
+   `fixed_time` — it has no *assigned* start/end once it's placed on the
+   day. That made it impossible to time-box the day or detect overlaps.
+   `ScheduledTask` wraps a `Task` with a concrete `start`/`end` (and the
+   `pet_name` for display), so a daily plan is now a `list[ScheduledTask]`.
+   `build_plan`, `detect_conflicts`, and `explain` now use this type.
+
+2. **Added a `weekday` field to `Task`.** `expand_recurring(tasks, day)` is
+   meant to decide which recurring tasks are due on a given day, but a
+   `weekly` task had no anchor telling it *which* weekday it recurs on. The
+   optional `weekday` (0=Mon..6=Sun) makes weekly recurrence resolvable.
+
+I updated `diagrams/uml.mmd` to match: it now shows `ScheduledTask` wrapping
+`Task`, the `Scheduler ..> ScheduledTask : produces` relationship, and the
+new `weekday` attribute.
 
 ---
 
