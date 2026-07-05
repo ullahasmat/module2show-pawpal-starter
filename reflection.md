@@ -55,8 +55,24 @@ new `weekday` attribute.
 
 **a. Constraints and priorities**
 
-- What constraints does your scheduler consider (for example: time, priority, preferences)?
-- How did you decide which constraints mattered most?
+My scheduler considers four constraints:
+
+1. **The owner's available window** (`available_start`/`available_end`) -- the
+   hard boundary a plan must fit inside.
+2. **Task priority** (low / medium / high) -- the main driver of ordering.
+3. **Fixed times** -- some tasks (e.g. 08:00 medication) must happen at an exact
+   time and are treated as immovable anchors.
+4. **Duration** -- used both to place tasks and as a tiebreaker between equal
+   priorities (shorter first).
+5. **Recurrence** -- daily/weekly tasks only appear on the days they are due.
+
+I decided fixed times mattered most, then priority. A fixed time is a promise
+the owner made (a vet appointment, a medication dose), so it is placed first and
+never moved. Everything else flexes around those anchors, ordered by priority so
+that if the day runs out of room, the least important tasks are the ones
+dropped. Preferences like `preferred_categories` exist on the Owner but I chose
+not to let them override priority -- keeping the ordering rule simple and
+predictable was more valuable than a more nuanced but harder-to-explain scheme.
 
 **b. Tradeoffs**
 
@@ -88,13 +104,51 @@ is still flagged.
 
 **a. How you used AI**
 
-- How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-- What kinds of prompts or questions were most helpful?
+I used my AI coding assistant across every phase: brainstorming the UML and
+class responsibilities, scaffolding the class skeleton from that UML,
+implementing the scheduling algorithms (greedy placement, recurrence,
+conflict detection), generating the pytest suite, and drafting documentation.
+
+The most effective features were:
+
+- **Agent / multi-file editing** for scaffolding and refactors -- generating the
+  dataclass skeleton and later wiring `app.py` to the logic layer in one pass.
+- **Attaching a file and asking for a critique**, e.g. "review this skeleton for
+  missing relationships or logic bottlenecks." That surfaced the two best design
+  changes I made: adding a `ScheduledTask` class (a plan needs assigned
+  start/end times, not raw tasks) and a `weekday` anchor for weekly recurrence.
+- **Running the CLI demo and pytest to verify behavior**, not just reading the
+  code. Seeing `main.py` actually print a plan -- and later 15 green tests --
+  was how I trusted each change.
+
+The most helpful prompts were specific and grounded in my files: "how should the
+Scheduler retrieve tasks from the Owner's pets?" and "what are the most important
+edge cases to test for a scheduler with sorting and recurring tasks?"
+
+**Using separate chat sessions per phase** (e.g. a fresh session for algorithmic
+planning, another focused only on testing) kept each conversation's context
+narrow. The testing chat stayed focused on edge cases instead of drifting back
+into implementation details, which made its suggestions sharper and easier to
+act on.
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+The clearest example of not accepting a suggestion as-is was `sort_by_time()`.
+The assistant's first idea assumed task times were stored as `"HH:MM"` **strings**
+and suggested parsing them in the sort key. My model stores times as
+`datetime.time` objects with `None` for flexible tasks, so string parsing would
+have been both fragile and wrong. I kept my stronger type and instead used a
+tuple sort key -- `(fixed_time is None, minutes, -priority)` -- that pushes
+untimed tasks to the end without any parsing. I made a similar call on
+`detect_conflicts()`: I rejected a "more Pythonic" one-line comprehension and a
+faster sweep-line rewrite, because for a handful of daily tasks the readable
+pairwise version is clearer and the performance difference is unmeasurable.
+
+I verified AI suggestions two ways: by running `main.py` and reading the actual
+output (e.g. confirming a completed daily task spawned a copy due the *next*
+day), and by writing tests that pin the behavior -- including a boundary test
+that two tasks touching at 08:30 are **not** flagged as a conflict, which guards
+the strict `<` comparison in the overlap check.
 
 ---
 
@@ -102,13 +156,33 @@ is still flagged.
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+I wrote 15 pytest cases covering the four algorithms plus edge cases:
+
+- **Sorting** -- `sort_by_time` returns timed tasks chronologically with flexible
+  tasks last; `sort_tasks` orders by priority.
+- **Filtering** -- `filter_by_pet` (including an unknown-pet name returning an
+  empty list) and `filter_by_status` excluding completed tasks.
+- **Recurrence** -- completing a daily task spawns a copy due the next day, a
+  weekly task advances +7 days, a non-recurring task returns `None`, and a
+  weekly task only appears on its weekday.
+- **Conflict detection** -- two tasks at the same time are flagged, but two tasks
+  that merely touch at a boundary are not.
+- **Planning edge cases** -- an owner with no tasks yields an empty plan, and a
+  task too long for the available window is dropped.
+
+These mattered because the scheduler's bugs would be *silent*: a wrong sort or a
+missed conflict still produces a plausible-looking plan, so only tests catch it.
+I deliberately set explicit `due_date` values in the recurrence tests so they do
+not depend on the real "today" and stay deterministic.
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+I am fairly confident -- about **4 out of 5**. The core behaviors are covered by
+passing happy-path and edge-case tests, and I verified the whole system end to
+end through the CLI demo and the Streamlit UI. I held back the last point because
+a few areas are still untested: packing several *flexible* tasks around multiple
+fixed anchors, invalid input (e.g. an unknown priority string), and cross-pet
+conflicts specifically. Those are the first cases I would add next.
 
 ---
 
@@ -116,12 +190,34 @@ is still flagged.
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+I am most satisfied with the clean separation between data and behavior. The
+`Owner`, `Pet`, and `Task` dataclasses hold state, and the `Scheduler` holds all
+the algorithms. Because the scheduler has no UI dependencies, I could build and
+verify the entire "brain" from a plain CLI script before touching Streamlit, and
+I could unit-test every algorithm in isolation. The `explain()` method is a
+close second -- having the system articulate *why* it made each choice made the
+whole thing feel trustworthy rather than magic.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+I would reconcile my two recurrence mechanisms. `expand_recurring()` treats
+recurring tasks as templates that appear on matching days, while
+`complete_task()` spawns a concrete dated next occurrence. They coexist because
+`build_plan` skips completed tasks, but a single due-date-driven model would be
+cleaner and would stop completed-task history from accumulating. I would also
+add input validation (an unknown priority string currently ranks as 0 instead of
+raising) and a smarter placement pass that can repack flexible tasks around
+anchors rather than dropping them greedily.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+The biggest lesson was what being the **lead architect** actually means when
+working with a powerful AI. The assistant could generate code faster than I could
+type, but the value I added was judgment: deciding where constraints should live,
+choosing to detect conflicts rather than auto-resolve them, keeping a readable
+algorithm over a "cleverer" one, and insisting that every suggestion be verified
+by a demo run or a test before I trusted it. The AI is an excellent implementer
+and a tireless reviewer, but the design decisions -- and the responsibility for
+whether the system is actually correct -- stayed with me. Treating the AI as a
+collaborator I direct and check, rather than an oracle I obey, is what kept the
+final system coherent.
