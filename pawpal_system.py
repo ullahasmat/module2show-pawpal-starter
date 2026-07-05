@@ -118,6 +118,38 @@ class Scheduler:
             key=lambda t: (-t.priority_rank(), t.duration_minutes, t.title),
         )
 
+    def sort_by_time(self, tasks: list[Task]) -> list[Task]:
+        """Order tasks chronologically by their ``fixed_time``.
+
+        The lambda key is a tuple: the first element (``fixed_time is None``)
+        keeps flexible tasks -- which have no set time -- at the end, and the
+        second sorts the timed tasks by minutes-since-midnight. Priority breaks
+        ties among the flexible tasks.
+        """
+        return sorted(
+            tasks,
+            key=lambda t: (
+                t.fixed_time is None,  # False (0) before True (1): timed tasks first
+                _to_minutes(t.fixed_time) if t.fixed_time is not None else 0,
+                -t.priority_rank(),
+            ),
+        )
+
+    def filter_by_pet(self, pet_name: str) -> list[Task]:
+        """Return the tasks belonging to the pet with the given name."""
+        for pet in self.owner.pets:
+            if pet.name == pet_name:
+                return list(pet.tasks)
+        return []
+
+    def filter_by_status(self, completed: bool = False) -> list[Task]:
+        """Return the owner's tasks matching a completion status.
+
+        Defaults to pending tasks (``completed=False``); pass ``True`` to get
+        the finished ones.
+        """
+        return [t for t in self.owner.all_tasks() if t.completed == completed]
+
     def expand_recurring(self, tasks: list[Task], day: date) -> list[Task]:
         """Return the subset of tasks that actually happen on ``day``.
 

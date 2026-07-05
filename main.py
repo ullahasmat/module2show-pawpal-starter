@@ -50,6 +50,29 @@ def main() -> None:
     print("-" * 48)
     print(f"{len(plan)} task(s) planned across {len(owner.pets)} pet(s).")
 
+    # --- Sorting: tasks were added out of order; sort_by_time fixes that -----
+    print("\n" + "=" * 48)
+    print("  All tasks sorted by time")
+    print("=" * 48)
+    for t in scheduler.sort_by_time(owner.all_tasks()):
+        when = t.fixed_time.strftime("%H:%M") if t.fixed_time else "--:-- (flexible)"
+        print(f"  {when}  {t.title} [{t.priority}]")
+
+    # --- Filtering: by pet ---------------------------------------------------
+    print("\n" + "=" * 48)
+    print("  Filter: Mochi's tasks only")
+    print("=" * 48)
+    for t in scheduler.filter_by_pet("Mochi"):
+        print(f"  - {t.title}")
+
+    # --- Filtering: by status (mark one done, then list what's pending) ------
+    owner.all_tasks()[0].mark_complete()
+    print("\n" + "=" * 48)
+    print("  Filter: pending tasks (after marking one complete)")
+    print("=" * 48)
+    for t in scheduler.filter_by_status(completed=False):
+        print(f"  - {t.title}")
+
 
 if __name__ == "__main__":
     main()
