@@ -138,12 +138,8 @@ if st.button("Generate schedule", type="primary"):
                 ]
             )
 
-            conflicts = scheduler.detect_conflicts(plan)
-            if conflicts:
-                st.error(
-                    "Overlapping fixed-time tasks: "
-                    + ", ".join(f"{a.task.title} ↔ {b.task.title}" for a, b in conflicts)
-                )
+            for warning in scheduler.conflict_warnings(plan):
+                st.error(f"⚠️ {warning}")
 
             with st.expander("Why this plan?"):
                 st.text(scheduler.explain(plan))

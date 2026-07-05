@@ -21,6 +21,8 @@ def build_demo_owner() -> Owner:
     # Pet 1: a dog with time-anchored and flexible tasks.
     mochi = Pet(name="Mochi", species="dog", breed="Shiba Inu")
     mochi.add_task(Task("Breakfast", 10, priority="high", category="feeding", fixed_time=time(7, 30)))
+    # Deliberately clashes with Breakfast (also 07:30) to demo conflict detection.
+    mochi.add_task(Task("Medication", 5, priority="high", category="meds", fixed_time=time(7, 30)))
     mochi.add_task(Task("Morning walk", 30, priority="high", category="walk", fixed_time=time(8, 0)))
     mochi.add_task(Task("Evening walk", 30, priority="medium", category="walk", fixed_time=time(18, 0)))
     mochi.add_task(Task("Enrichment puzzle", 20, priority="low", category="enrichment", recurrence="daily"))
@@ -49,6 +51,17 @@ def main() -> None:
     print(scheduler.explain(plan))
     print("-" * 48)
     print(f"{len(plan)} task(s) planned across {len(owner.pets)} pet(s).")
+
+    # --- Conflict detection --------------------------------------------------
+    print("\n" + "=" * 48)
+    print("  Conflict check")
+    print("=" * 48)
+    warnings = scheduler.conflict_warnings(plan)
+    if warnings:
+        for w in warnings:
+            print(f"  ⚠️  {w}")
+    else:
+        print("  No conflicts detected.")
 
     # --- Sorting: tasks were added out of order; sort_by_time fixes that -----
     print("\n" + "=" * 48)

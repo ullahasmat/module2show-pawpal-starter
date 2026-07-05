@@ -282,6 +282,23 @@ class Scheduler:
                 conflicts.append((a, b))
         return conflicts
 
+    def conflict_warnings(self, plan: list[ScheduledTask]) -> list[str]:
+        """Return a readable warning string for each overlapping pair.
+
+        Lightweight and non-fatal: it never raises. An empty list means the
+        plan is conflict-free. Same-pet and cross-pet overlaps are both caught.
+        """
+        warnings: list[str] = []
+        for a, b in self.detect_conflicts(plan):
+            a_pet = a.pet_name or "?"
+            b_pet = b.pet_name or "?"
+            same = "same pet" if a.pet_name == b.pet_name else "different pets"
+            warnings.append(
+                f"'{a.task.title}' ({a_pet}, {a.start:%H:%M}-{a.end:%H:%M}) overlaps "
+                f"'{b.task.title}' ({b_pet}, {b.start:%H:%M}-{b.end:%H:%M}) [{same}]"
+            )
+        return warnings
+
     def explain(self, plan: list[ScheduledTask]) -> str:
         """Return a human-readable explanation of the plan."""
         if not plan:
@@ -297,10 +314,7 @@ class Scheduler:
                 f"({s.task.duration_minutes} min, {s.task.priority} priority){anchored}"
             )
 
-        conflicts = self.detect_conflicts(plan)
-        if conflicts:
-            lines.append("Warning -- overlapping fixed-time tasks:")
-            for a, b in conflicts:
-                lines.append(f"  - '{a.task.title}' overlaps '{b.task.title}'")
+        for warning in self.conflict_warnings(plan):
+            lines.append(f"Warning -- {warning}")
 
         return "\n".join(lines)
