@@ -70,29 +70,40 @@ are slotted into the earliest free gap by priority.
 ## 🧪 Testing PawPal+
 
 ```bash
-# Run the full test suite:
-pytest
+# Run the full test suite (use -m so imports resolve from the project root):
+python -m pytest
 
 # Run with coverage:
-pytest --cov
+python -m pytest --cov
 ```
 
 Sample test output:
 
 ```
-# Paste your pytest output here
+============================= test session starts ==============================
+platform darwin -- Python 3.14.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/pjasmat/codepath/AI/module2show-pawpal-starter
+collected 2 items
+
+tests/test_pawpal.py ..                                                  [100%]
+
+============================== 2 passed in 0.01s ===============================
 ```
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
+The scheduling "brain" lives in `Scheduler` (in `pawpal_system.py`).
+`Scheduler.build_plan(day)` orchestrates everything below: it expands
+recurring tasks, anchors fixed-time tasks, then greedily places the remaining
+tasks by priority into the earliest free slot inside the owner's window,
+dropping any that no longer fit.
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `Scheduler.sort_tasks()`, `Scheduler.sort_by_time()` | `sort_tasks` orders by priority (high→low), then shortest duration as a tiebreaker. `sort_by_time` orders chronologically by `fixed_time`, pushing flexible (untimed) tasks to the end. |
+| Filtering | `Scheduler.filter_by_pet()`, `Scheduler.filter_by_status()` | Filter tasks down to a single pet by name, or by completion status (`completed=False` returns pending tasks, `True` returns finished ones). |
+| Conflict handling | `Scheduler.detect_conflicts()`, `Scheduler.conflict_warnings()` | `detect_conflicts` returns overlapping pairs using full duration ranges (not just exact start times); `conflict_warnings` turns them into readable, non-crashing warning strings. Catches same-pet and cross-pet clashes. |
+| Recurring tasks | `Scheduler.expand_recurring()`, `Task.next_occurrence()`, `Pet.complete_task()` | `expand_recurring` selects tasks due on a given day (`daily`, or `weekly` matched to a weekday). Completing a recurring task via `complete_task` auto-spawns its next occurrence, advancing the due date with `timedelta` (daily → +1 day, weekly → +1 week). |
 
 ## 📸 Demo Walkthrough
 
