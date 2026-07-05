@@ -44,15 +44,28 @@ pip install -r requirements.txt
 
 ## 🖥️ Sample Output
 
-Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
+Running the CLI demo (`python main.py`) produces the schedule below. It builds
+one owner (Jordan) with two pets and seven tasks, then prints the plan the
+scheduler generates:
 
 ```
-# e.g.:
-# Daily plan for Biscuit (Golden Retriever):
-#   08:00 — Morning walk (30 min) [priority: high]
-#   09:00 — Feeding (10 min) [priority: high]
-#   ...
+================================================
+  Today's Schedule  (Sunday, July 05, 2026)
+================================================
+Daily plan for Jordan (window 07:00-20:00):
+  07:00-07:05  Clean litter box for Luna (5 min, medium priority)
+  07:05-07:20  Play / laser for Luna (15 min, low priority)
+  07:30-07:40  Breakfast for Mochi (10 min, high priority) [fixed]
+  07:45-07:55  Feeding for Luna (10 min, high priority) [fixed]
+  08:00-08:30  Morning walk for Mochi (30 min, high priority) [fixed]
+  08:30-08:50  Enrichment puzzle for Mochi (20 min, low priority)
+  18:00-18:30  Evening walk for Mochi (30 min, medium priority) [fixed]
+------------------------------------------------
+7 task(s) planned across 2 pet(s).
 ```
+
+Fixed-time tasks are anchored to their exact time (`[fixed]`); flexible tasks
+are slotted into the earliest free gap by priority.
 
 ## 🧪 Testing PawPal+
 
