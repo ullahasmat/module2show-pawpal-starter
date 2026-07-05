@@ -6,6 +6,7 @@ today's generated schedule to the terminal. Run it with: python main.py
 
 from datetime import date, time
 
+from formatting import schedule_table
 from pawpal_system import Owner, Pet, Scheduler, Task
 
 
@@ -46,11 +47,10 @@ def main() -> None:
     plan = scheduler.build_plan(today)
 
     print("=" * 48)
-    print(f"  Today's Schedule  ({today:%A, %B %d, %Y})")
+    print(f"  📅 Today's Schedule  ({today:%A, %B %d, %Y})")
     print("=" * 48)
-    print(scheduler.explain(plan))
-    print("-" * 48)
-    print(f"{len(plan)} task(s) planned across {len(owner.pets)} pet(s).")
+    print(schedule_table(plan))
+    print(f"\n{len(plan)} task(s) planned across {len(owner.pets)} pet(s).")
 
     # --- Conflict detection --------------------------------------------------
     print("\n" + "=" * 48)

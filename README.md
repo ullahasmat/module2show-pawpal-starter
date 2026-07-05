@@ -74,28 +74,36 @@ pip install -r requirements.txt
 ## 🖥️ Sample Output
 
 Running the CLI demo (`python main.py`) builds one owner (Jordan) with two pets
-and eight tasks, then prints the plan the scheduler generates. Two tasks are
-deliberately set to 07:30 to demonstrate conflict detection:
+and eight tasks, then prints the plan the scheduler generates as a formatted
+table (category and priority emojis via `tabulate`). Two tasks are deliberately
+set to 07:30 to demonstrate conflict detection:
 
 ```
 ================================================
-  Today's Schedule  (Sunday, July 05, 2026)
+  📅 Today's Schedule  (Sunday, July 05, 2026)
 ================================================
-Daily plan for Jordan (window 07:00-20:00):
-  07:00-07:05  Clean litter box for Luna (5 min, medium priority)
-  07:05-07:20  Play / laser for Luna (15 min, low priority)
-  07:30-07:35  Medication for Mochi (5 min, high priority) [fixed]
-  07:30-07:40  Breakfast for Mochi (10 min, high priority) [fixed]
-  07:45-07:55  Feeding for Luna (10 min, high priority) [fixed]
-  08:00-08:30  Morning walk for Mochi (30 min, high priority) [fixed]
-  08:30-08:50  Enrichment puzzle for Mochi (20 min, low priority)
-  18:00-18:30  Evening walk for Mochi (30 min, medium priority) [fixed]
-Warning -- 'Medication' (Mochi, 07:30-07:35) overlaps 'Breakfast' (Mochi, 07:30-07:40) [same pet]
-------------------------------------------------
+╭─────────────┬─────────────────────┬───────┬────────────┬──────────╮
+│ Time        │ Task                │ Pet   │ Priority   │ Slot     │
+├─────────────┼─────────────────────┼───────┼────────────┼──────────┤
+│ 07:00-07:05 │ 🛁 Clean litter box  │ Luna  │ 🟡 medium   │ flexible │
+│ 07:05-07:20 │ 🧩 Play / laser      │ Luna  │ 🟢 low      │ flexible │
+│ 07:30-07:35 │ 💊 Medication        │ Mochi │ 🔴 high     │ 📌 fixed  │
+│ 07:30-07:40 │ 🥣 Breakfast         │ Mochi │ 🔴 high     │ 📌 fixed  │
+│ 07:45-07:55 │ 🥣 Feeding           │ Luna  │ 🔴 high     │ 📌 fixed  │
+│ 08:00-08:30 │ 🚶 Morning walk      │ Mochi │ 🔴 high     │ 📌 fixed  │
+│ 08:30-08:50 │ 🧩 Enrichment puzzle │ Mochi │ 🟢 low      │ flexible │
+│ 18:00-18:30 │ 🚶 Evening walk      │ Mochi │ 🟡 medium   │ 📌 fixed  │
+╰─────────────┴─────────────────────┴───────┴────────────┴──────────╯
+
 8 task(s) planned across 2 pet(s).
+
+================================================
+  Conflict check
+================================================
+  ⚠️  'Medication' (Mochi, 07:30-07:35) overlaps 'Breakfast' (Mochi, 07:30-07:40) [same pet]
 ```
 
-Fixed-time tasks are anchored to their exact time (`[fixed]`); flexible tasks
+Fixed-time tasks are anchored to their exact time (`📌 fixed`); flexible tasks
 are slotted into the earliest free gap by priority.
 
 ## 🧪 Testing PawPal+
@@ -200,6 +208,24 @@ PawPal+ remembers your pets and tasks between runs by saving them to a
 - `tests/test_pawpal.py` — a round-trip test (save then load preserves data).
 - `.gitignore` — ignores the generated `data.json`.
 
+## 🎨 Output Formatting
+
+PawPal+ uses light formatting to make output easy to scan. The helpers live in
+`formatting.py` and are shared by both the CLI (`main.py`) and the Streamlit UI
+(`app.py`):
+
+- **Category emojis** — `category_icon()` maps each task category to an emoji
+  (🚶 walk, 🥣 feeding, 💊 meds, 🛁 grooming, 🧩 enrichment, 📌 general).
+- **Color-coded priority** — `priority_label()` prefixes the priority with a
+  colored dot (🔴 high, 🟡 medium, 🟢 low).
+- **Status indicators** — `status_icon()` shows ✅ done / ⬜ pending.
+- **Structured CLI tables** — `schedule_table()` renders the daily plan with the
+  [`tabulate`](https://pypi.org/project/tabulate/) library using its
+  `rounded_outline` style (shown in the demo output above).
+
+In the Streamlit UI these same icons appear in the task and schedule tables.
+The `tabulate` dependency is listed in `requirements.txt`.
+
 ## 📸 Demo Walkthrough
 
 ### Running the app
@@ -251,20 +277,27 @@ occurrence:
 
 ```
 ================================================
-  Today's Schedule  (Sunday, July 05, 2026)
+  📅 Today's Schedule  (Sunday, July 05, 2026)
 ================================================
-Daily plan for Jordan (window 07:00-20:00):
-  07:00-07:05  Clean litter box for Luna (5 min, medium priority)
-  07:05-07:20  Play / laser for Luna (15 min, low priority)
-  07:30-07:35  Medication for Mochi (5 min, high priority) [fixed]
-  07:30-07:40  Breakfast for Mochi (10 min, high priority) [fixed]
-  07:45-07:55  Feeding for Luna (10 min, high priority) [fixed]
-  08:00-08:30  Morning walk for Mochi (30 min, high priority) [fixed]
-  08:30-08:50  Enrichment puzzle for Mochi (20 min, low priority)
-  18:00-18:30  Evening walk for Mochi (30 min, medium priority) [fixed]
-Warning -- 'Medication' (Mochi, 07:30-07:35) overlaps 'Breakfast' (Mochi, 07:30-07:40) [same pet]
-------------------------------------------------
+╭─────────────┬─────────────────────┬───────┬────────────┬──────────╮
+│ Time        │ Task                │ Pet   │ Priority   │ Slot     │
+├─────────────┼─────────────────────┼───────┼────────────┼──────────┤
+│ 07:00-07:05 │ 🛁 Clean litter box  │ Luna  │ 🟡 medium   │ flexible │
+│ 07:05-07:20 │ 🧩 Play / laser      │ Luna  │ 🟢 low      │ flexible │
+│ 07:30-07:35 │ 💊 Medication        │ Mochi │ 🔴 high     │ 📌 fixed  │
+│ 07:30-07:40 │ 🥣 Breakfast         │ Mochi │ 🔴 high     │ 📌 fixed  │
+│ 07:45-07:55 │ 🥣 Feeding           │ Luna  │ 🔴 high     │ 📌 fixed  │
+│ 08:00-08:30 │ 🚶 Morning walk      │ Mochi │ 🔴 high     │ 📌 fixed  │
+│ 08:30-08:50 │ 🧩 Enrichment puzzle │ Mochi │ 🟢 low      │ flexible │
+│ 18:00-18:30 │ 🚶 Evening walk      │ Mochi │ 🟡 medium   │ 📌 fixed  │
+╰─────────────┴─────────────────────┴───────┴────────────┴──────────╯
+
 8 task(s) planned across 2 pet(s).
+
+================================================
+  Conflict check
+================================================
+  ⚠️  'Medication' (Mochi, 07:30-07:35) overlaps 'Breakfast' (Mochi, 07:30-07:40) [same pet]
 
 ================================================
   All tasks sorted by time

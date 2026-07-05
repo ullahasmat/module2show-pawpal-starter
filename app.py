@@ -3,6 +3,7 @@ from datetime import date, time
 
 import streamlit as st
 
+from formatting import category_icon, priority_label, status_icon
 from pawpal_system import Owner, Pet, Scheduler, Task
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
@@ -157,10 +158,10 @@ else:
             [
                 {
                     "Time": t.fixed_time.strftime("%H:%M") if t.fixed_time else "flexible",
-                    "Task": t.title,
-                    "Priority": t.priority,
+                    "Task": f"{category_icon(t.category)} {t.title}",
+                    "Priority": priority_label(t.priority),
                     "Recurs": t.recurrence,
-                    "Status": "✅ done" if t.completed else "⬜ pending",
+                    "Status": f"{status_icon(t.completed)} {'done' if t.completed else 'pending'}",
                 }
                 for t in tasks
             ]
@@ -229,10 +230,10 @@ if st.button("Generate schedule", type="primary"):
                     {
                         "Start": s.start.strftime("%H:%M"),
                         "End": s.end.strftime("%H:%M"),
-                        "Task": s.task.title,
+                        "Task": f"{category_icon(s.task.category)} {s.task.title}",
                         "Pet": s.pet_name,
-                        "Priority": s.task.priority,
-                        "Fixed": "✓" if s.task.fixed_time else "",
+                        "Priority": priority_label(s.task.priority),
+                        "Fixed": "📌" if s.task.fixed_time else "",
                     }
                     for s in plan
                 ]
